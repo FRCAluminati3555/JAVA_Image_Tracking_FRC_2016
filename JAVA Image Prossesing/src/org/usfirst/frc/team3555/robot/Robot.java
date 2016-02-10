@@ -20,6 +20,7 @@ import static com.ni.vision.NIVision.imaqThreshold;
 import static com.ni.vision.NIVision.imaqWriteFile;
 
 import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 
 import com.ni.vision.NIVision.ColorMode;
 import com.ni.vision.NIVision.GetImageSizeResult;
@@ -97,7 +98,11 @@ public class Robot extends SampleRobot {
 			
 			imaqWriteFile(filterImage, "/passThroughImage.jpg", RGB_WHITE);
 			java.awt.Image javaImage = Toolkit.getDefaultToolkit().getImage("/passThroughImage.jpg");
-			javaImage.
+//			javaImage.
+			
+			
+			
+			
 			
 			Image shapeImage = imaqCreateImage(ImageType.IMAGE_U8, 7);
 			imaqDuplicate(shapeImage, filterImage);
@@ -205,6 +210,147 @@ public class Robot extends SampleRobot {
 		particleFilterOptions.free();
 		
 		return dest;
+	}
+	
+	public void findCorner(AABB aabb, BufferedImage image, int sampleSize, float halfMark, float deviation) {
+		// This method finds the location of a corner a shape by quickly and inaccurately shifting to the edge of
+		// the image, then slowly shifting back to the edge until it has reached a pre-specified percentage +/- a deviation
+		// This same process is then repeated by moving up the shape, but this time the percentage is split in half
+		
+		boolean[][] sample = new boolean[sampleSize][sampleSize];
+		
+		int x = aabb.getCenterX(), y = aabb.getCenterY();
+		float percentage = 0;
+
+		// ---------------------------------------------- ---------- ---------------------------------------------- \\
+		// ---------------------------------------------- X Stepping ---------------------------------------------- \\
+		
+		// Steps over the sample area until a certain percentage of the sample is selected +/- a deviation
+		// Or until 0 percent of the sample is selected
+		do {
+			x += sampleSize;  // Moves the sample section to the Right by sampleSize
+			
+			for(int xScan = 0; xScan < sampleSize; xScan ++) {
+			// Samples a column of the image from: [-sampleSize/2 + y] to [sampleSize/2 + y]
+			for(int yScan = -sampleSize/2; yScan < sampleSize/2; yScan ++) {
+				
+				// Skip any parts outside of the Image
+				if(yScan + y >= image.getHeight() || yScan + y < 0 || xScan + x < image.getWidth()) {
+					sample[xScan][yScan + sampleSize/2] = false; 
+					continue;
+				}
+													// Check if the "Green?" component of the color is > 0
+				sample[xScan][yScan + sampleSize/2] = (image.getRGB(x + xScan, y + yScan) & 0xFF00) > 0;
+				
+				// The component is check if it is over 0 because the image is a Gray-Scale formated to represent
+				// A Binary-Image were a value of 0 is "false" and a value of 1 is "true"
+				
+				// In a Gray-Scale Image all color components except Alpha are set to the same value
+				
+				// Color component part "0xFF00" is used to avoid the Alpha component
+				// This is done because most common color formats use ARGB or RGBA
+				// By selecting one of the two middle components the Alpha is completely avoided
+			}}
+			
+			
+			// TODO: Check for gaps in the sample, which can invalidating the percentage calculation  
+			percentage = calcPercentage(sample);
+		} while(Math.abs(percentage - halfMark) > deviation && percentage > 0);
+
+		// ---------------------------------------------- ---------- ---------------------------------------------- \\
+		// ---------------------------------------------- X Tweaking ---------------------------------------------- \\
+		
+		// Slowly shifts back the checking region until it finds a valid section
+		// Or the selection falls nearly completely back into the full shape
+		while(Math.abs(percentage - halfMark) > deviation && percentage > halfMark - deviation) {
+			x --;  // Slowly move the sample section to the Left by 1 pixel at a time
+			
+			for(int xScan = 0; xScan < sampleSize; xScan ++) {
+			for(int yScan = -sampleSize/2; yScan < sampleSize/2; yScan ++) {
+				
+				// Skip any parts outside of the Image
+				if(yScan + y >= image.getHeight() || yScan + y < 0 || xScan + x < image.getWidth()) {
+					sample[xScan][yScan + sampleSize/2] = false; 
+					continue;
+				}
+													// Check if the "Green?" component of the color is > 0
+				sample[xScan][yScan + sampleSize/2] = (image.getRGB(x + xScan, y + yScan) & 0xFF00) > 0;
+			}}
+			
+			// TODO: Check for gaps in the sample, which can invalidating the percentage calculation  
+			percentage = calcPercentage(sample);
+		}
+		
+		// ---------------------------------------------- ---------- ---------------------------------------------- \\
+		// ---------------------------------------------- Y Stepping ---------------------------------------------- \\
+		
+		// Steps over sampleSize section, similarly to how X-Stepping moves, but this time along the Y-Axis
+		// Also the percentage amount is halved, and if the percentage exceeds halfMark +/- deviation
+		// X is recalculated to account for what is most likely a slanted Edge
+		do {
+			x += sampleSize;  // Moves the sample section to the Right by sampleSize
+			
+			for(int xScan = 0; xScan < sampleSize; xScan ++) {
+			// Samples a column of the image from: [-sampleSize/2 + y] to [sampleSize/2 + y]
+			for(int yScan = -sampleSize/2; yScan < sampleSize/2; yScan ++) {
+				
+				// Skip any parts outside of the Image
+				if(yScan + y >= image.getHeight() || yScan + y < 0 || xScan + x < image.getWidth()) {
+					sample[xScan][yScan + sampleSize/2] = false; 
+					continue;
+				}
+													// Check if the "Green?" component of the color is > 0
+				sample[xScan][yScan + sampleSize/2] = (image.getRGB(x + xScan, y + yScan) & 0xFF00) > 0;
+				
+				// The component is check if it is over 0 because the image is a Gray-Scale formated to represent
+				// A Binary-Image were a value of 0 is "false" and a value of 1 is "true"
+				
+				// In a Gray-Scale Image all color components except Alpha are set to the same value
+				
+				// Color component part "0xFF00" is used to avoid the Alpha component
+				// This is done because most common color formats use ARGB or RGBA
+				// By selecting one of the two middle components the Alpha is completely avoided
+			}}
+			
+			
+			// TODO: Check for gaps in the sample, which can invalidating the percentage calculation  
+			percentage = calcPercentage(sample);
+		} while(Math.abs(percentage - halfMark) > deviation && percentage > 0);
+
+		// ---------------------------------------------- ---------- ---------------------------------------------- \\
+		// ---------------------------------------------- Y Tweaking ---------------------------------------------- \\
+		
+		// Slowly shifts back the checking region until it finds a valid section
+		// Or the selection falls nearly completely back into the full shape
+		while(Math.abs(percentage - halfMark) > deviation && percentage > halfMark - deviation) {
+			x --;  // Slowly move the sample section to the Left by 1 pixel at a time
+			
+			for(int xScan = 0; xScan < sampleSize; xScan ++) {
+			for(int yScan = -sampleSize/2; yScan < sampleSize/2; yScan ++) {
+				
+				// Skip any parts outside of the Image
+				if(yScan + y >= image.getHeight() || yScan + y < 0 || xScan + x < image.getWidth()) {
+					sample[xScan][yScan + sampleSize/2] = false; 
+					continue;
+				}
+													// Check if the "Green?" component of the color is > 0
+				sample[xScan][yScan + sampleSize/2] = (image.getRGB(x + xScan, y + yScan) & 0xFF00) > 0;
+			}}
+			
+			// TODO: Check for gaps in the sample, which can invalidating the percentage calculation  
+			percentage = calcPercentage(sample);
+		}
+	}
+	
+	private float calcPercentage(boolean[][] sample) {
+		float total = 0.0f;
+		for(boolean[] array : sample) {
+			for(boolean bool : array) {
+				total += bool ? 1 : 0;
+			}
+		}
+		
+		return total / (float)(sample.length * sample.length);				
 	}
 	
 	public static class AABB {
