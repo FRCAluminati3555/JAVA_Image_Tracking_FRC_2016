@@ -342,15 +342,166 @@ public class Robot extends SampleRobot {
 		}
 	}
 	
-	private float calcPercentage(boolean[][] sample) {
-		float total = 0.0f;
-		for(boolean[] array : sample) {
-			for(boolean bool : array) {
-				total += bool ? 1 : 0;
+	
+	
+	public static class Sample {
+		private BufferedImage image;
+		private int sampleSize;
+		private boolean[][] sampleData;
+		private int x, y;
+		
+		public Sample(int sampleSize, int x, int y) {
+			this.sampleSize = sampleSize;
+			this.sampleData = new boolean[sampleSize][sampleSize];
+			
+			this.x = x;
+			this.y = y;
+		}
+		
+		public float calcPercentage() {
+			float total = 0.0f;
+			for(boolean[] array : sampleData) {
+				for(boolean bool : array) {
+					total += bool ? 1 : 0;
+				}
+			}
+			
+			return total / (float)(sampleSize * sampleSize);				
+		}
+		
+		/**
+		 * Moves the sample in a Direction by sampleSize 
+		 */
+		public void step(Direction direction) {
+			if(direction.isVertical())
+				y += direction.getModifier() * sampleSize;
+			else
+				x += direction.getModifier() * sampleSize;			
+		}
+		
+		/**
+		 * Moves the sample in a Direction by one Pixel 
+		 */
+		public void nudge(Direction direction) {
+			if(direction.isVertical())
+				y += direction.getModifier();
+			else
+				x += direction.getModifier();			
+		}
+		
+		public float sample(OverflowHandel handel) {
+			if(image == null) throw new IllegalStateException("No Image bound to Sample. Can not sample");
+			
+			float total = 0.0f;
+			for(int x = 0; x < sampleSize; x ++) {
+			for(int y = 0; y < sampleSize; y ++) {
+				if(this.x + x >= image.getWidth() || this.y + y >= image.getHeight() || this.x + x < 0 || this.y + y < 0) 
+					sampleData[x][y] = handel.handelOverflow(this);
+				else
+					sampleData[x][y] = image.getRGB(this.x + x, this.y + y) > 0;//TODO Proper Sample
+					
+				total += sampleData[x][y] ? 1 : 0;	
+			}}
+			
+			return total / (float)(sampleSize * sampleSize);
+		}
+		
+		public void stepToEdge(Direction direction, float edgePercentage, float deviation, Direction maintianDirection, boolean maintainTweekPercenatge) {
+			float percentage = calcPercentage();	
+			while(Math.abs(percentage - edgePercentage) < deviation && percentage > deviation) {
+				step(direction);
+				float newPercentage = sample(OverflowHandel.Zero_On_Overflows);
+				
+				if(maintianDirection != null) {
+					float differance = newPercentage - percentage;
+					if(Math.abs(differance) < deviation) {
+						tweekSample(differance > 0 ? maintianDirection : maintianDirection.getOppsite(), 
+								edgePercentage * (maintainTweekPercenatge ? 2 : 1), deviation / 2.0f, null, false);
+					}
+				}
+				
 			}
 		}
 		
-		return total / (float)(sample.length * sample.length);				
+		public void tweekSample(Direction direction, float edgePercentage, float deviation, Direction maintianDirection, boolean doubleTweekPercenatge) {
+			
+		}
+		
+		// ----------------------------------- -------------------- ----------------------------------- \\
+		// ----------------------------------- Accessor / Modifiers ----------------------------------- \\
+		
+		/**
+		 * Sets the image that the sample will sample from
+		 * @param image The image to use
+		 */
+		public void bindImage(BufferedImage image) {
+			this.image = image;
+		}
+		
+		public void clearSample() {
+			for(int x = 0; x < sampleSize; x ++) {
+			for(int y = 0; y < sampleSize; y ++) {
+				sampleData[x][y] = false;
+			}}
+		}
+		
+		public int getSampleSize() { return sampleSize; }
+		public boolean[][] getSampleData() { return sampleData; }
+
+		public int getX() { return x; }
+		public int getY() { return y; }
+		
+		public int getCenterX() { return x + sampleSize / 2; }
+		public int getCenterY() { return y + sampleSize / 2; }
+		
+		public static enum OverflowHandel {
+			Crash_On_Overflow, Zero_On_Overflows, Zero_All_On_Overflow, One_On_Overflows;
+			
+			public boolean handelOverflow(Sample sample) {
+				switch(this) {
+					case Crash_On_Overflow: 
+						throw new IndexOutOfBoundsException("Overflow handle " + toString());
+					case Zero_All_On_Overflow: sample.clearSample(); 
+					case Zero_On_Overflows: return false;
+					case One_On_Overflows: return true;
+					
+					default: return false;
+				}
+			}
+		}
+	}
+	
+	public static enum Direction {
+		Right(1), Left(-1), Up(-1), Down(1);
+		
+		private int modifier;
+		private Direction(int modifier) {
+			this.modifier = modifier;
+		}
+		
+		public int getModifier() { return modifier; }
+		public boolean isVertical() { return this == Up || this == Down; }
+		
+		public Direction getOppsite() {
+			switch(this) {
+				case Down: return Up;
+				case Left: return Right;
+				case Right: return Left;
+				case Up: return Down;
+				
+				default: return null;
+			}
+		}
+		
+		public static Direction getDirection(int modifer, boolean isVerticle) {
+			if(isVerticle) {
+				if(modifer < 0) return Up;
+				else 			return Down;
+			} else {
+				if(modifer < 0) return Left;
+				else 			return Right;
+			}
+		}
 	}
 	
 	public static class AABB {
