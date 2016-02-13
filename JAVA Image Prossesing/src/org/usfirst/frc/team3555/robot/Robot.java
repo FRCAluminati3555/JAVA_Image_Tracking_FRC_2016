@@ -369,6 +369,26 @@ public class Robot extends SampleRobot {
 			return total / (float)(sampleSize * sampleSize);				
 		}
 		
+		public float calcPercentageOnEdge(Direction direction, int edgeSize) {
+			int x = 0, y = 0, xMod = 0, yMod = 0;
+			
+			switch (direction) {
+				case Down: y = sampleSize - edgeSize; xMod = 1; break;
+				case Left: yMod = 1; break;
+					
+				case Right: x = sampleSize - edgeSize; yMod = 1; break;
+				case Up: xMod = 1; break;
+			}
+			
+			float total = 0;
+			for(int j = 0; j < edgeSize; j ++) {
+			for(int i = 0; i < sampleSize; i ++) {
+				total += sampleData[x + i * xMod + j * xMod == 0 ? 1 : 0][y + i * yMod + j * yMod == 0 ? 1 : 0] ? 1 : 0;
+			}}
+			
+			return total / (float) sampleSize;
+		}
+		
 		/**
 		 * Moves the sample in a Direction by sampleSize 
 		 */
@@ -406,25 +426,30 @@ public class Robot extends SampleRobot {
 			return total / (float)(sampleSize * sampleSize);
 		}
 		
-		public void stepToEdge(Direction direction, float edgePercentage, float deviation, Direction maintianDirection, boolean maintainTweekPercenatge) {
-			float percentage = calcPercentage();	
-			while(Math.abs(percentage - edgePercentage) < deviation && percentage > deviation) {
+		public void findEdge(Direction direction, float targetPercantage, float deviation, float boarderPercentage, int boarderSize) {
+			float percenatge = 0;
+
+			// Stepping Step
+			while(calcPercentageOnEdge(direction, boarderSize) > boarderPercentage) {
 				step(direction);
-				float newPercentage = sample(OverflowHandel.Zero_On_Overflows);
-				
-				if(maintianDirection != null) {
-					float differance = newPercentage - percentage;
-					if(Math.abs(differance) < deviation) {
-						tweekSample(differance > 0 ? maintianDirection : maintianDirection.getOppsite(), 
-								edgePercentage * (maintainTweekPercenatge ? 2 : 1), deviation / 2.0f, null, false);
-					}
-				}
-				
+				percenatge = sample(OverflowHandel.Zero_On_Overflows);
+			}
+						
+			// Tweaking Step
+			float differance = percenatge - targetPercantage;
+			while(Math.abs(differance) > deviation && percenatge > targetPercantage - deviation) {
+				if(differance > 0)
+					nudge(direction);
+				else 
+					nudge(direction.getOppsite());
+				percenatge = sample(OverflowHandel.Zero_On_Overflows);
+				differance = percenatge - targetPercantage;
 			}
 		}
 		
-		public void tweekSample(Direction direction, float edgePercentage, float deviation, Direction maintianDirection, boolean doubleTweekPercenatge) {
-			
+		public void findCorner(Direction primaryDirection, Direction secondaryDirection, float primaryPercenatge, float secondaryPercentage, float deviation, float boarderPercentage, int boarderSize) {
+			findEdge(primaryDirection, primaryPercenatge, deviation, boarderPercentage, boarderSize);
+			findEdge(secondaryDirection, secondaryPercentage, deviation, boarderPercentage, boarderSize);
 		}
 		
 		// ----------------------------------- -------------------- ----------------------------------- \\
