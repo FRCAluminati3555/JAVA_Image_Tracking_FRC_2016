@@ -32,6 +32,7 @@ import com.ni.vision.NIVision.ParticleFilterCriteria2;
 import com.ni.vision.NIVision.ParticleFilterOptions2;
 import com.ni.vision.NIVision.ShapeReport;
 
+import aABB.FindingAlgorithum.Sample.OverflowHandel;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SampleRobot;
@@ -213,15 +214,17 @@ public class Robot extends SampleRobot {
 	}
 	
 	
-	public Sample[] findBoundingBoxCorner(AABB aabb, int sampleSize) {
+	public Sample[] findBoundingBoxCorner(AABB aabb, BufferedImage image, int sampleSize) {
 		Sample[] samples = new Sample[4];
-		for(int i = 0; i < samples.length; i ++)
+		for(int i = 0; i < samples.length; i ++) {
 			samples[i] = new Sample(sampleSize, aabb.getCenterX(), aabb.getCenterY());
+			samples[i].bindImage(image);
+		}
 		
 		samples[0].findCorner(Direction.Right, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
 		samples[1].findCorner(Direction.Right, Direction.Down, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
-		samples[0].findCorner(Direction.Left, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
-		samples[1].findCorner(Direction.Left, Direction.Down, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
+		samples[0].findCorner(Direction.Left, Direction.Down, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
+		samples[1].findCorner(Direction.Left, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
 	
 		return samples;
 	}
@@ -300,7 +303,7 @@ public class Robot extends SampleRobot {
 				if(this.x + x >= image.getWidth() || this.y + y >= image.getHeight() || this.x + x < 0 || this.y + y < 0) 
 					sampleData[x][y] = handel.handelOverflow(this);
 				else
-					sampleData[x][y] = image.getRGB(this.x + x, this.y + y) > 0;//TODO Proper Sample
+					sampleData[x][y] = (image.getRGB(x + this.x, y + this.y) & 0xFF00) > 0;
 					
 				total += sampleData[x][y] ? 1 : 0;	
 			}}
@@ -310,6 +313,7 @@ public class Robot extends SampleRobot {
 		
 		public void findEdge(Direction direction, float targetPercantage, float deviation, float boarderPercentage, int boarderSize) {
 			float percenatge = 0;
+			sample(OverflowHandel.Zero_On_Overflows);
 
 			// Stepping Step
 			while(calcPercentageOnEdge(direction, boarderSize) > boarderPercentage) {
@@ -319,7 +323,7 @@ public class Robot extends SampleRobot {
 						
 			// Tweaking Step
 			float differance = percenatge - targetPercantage;
-			while(Math.abs(differance) > deviation && percenatge > targetPercantage - deviation) {
+			while(Math.abs(differance) > deviation) {
 				if(differance > 0)
 					nudge(direction);
 				else 
