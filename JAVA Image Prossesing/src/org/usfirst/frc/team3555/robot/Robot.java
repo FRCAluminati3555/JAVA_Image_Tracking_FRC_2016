@@ -1,38 +1,32 @@
 package org.usfirst.frc.team3555.robot;
 
-import static com.ni.vision.NIVision.RGB_WHITE;
-import static com.ni.vision.NIVision.imaqAnd;
-import static com.ni.vision.NIVision.imaqConvexHull;
-import static com.ni.vision.NIVision.imaqCountParticles;
-import static com.ni.vision.NIVision.imaqCreateImage;
-import static com.ni.vision.NIVision.imaqDuplicate;
-import static com.ni.vision.NIVision.imaqExtractColorPlanes;
-import static com.ni.vision.NIVision.imaqGetImageSize;
-import static com.ni.vision.NIVision.imaqMask;
-import static com.ni.vision.NIVision.imaqMatchShape;
-import static com.ni.vision.NIVision.imaqMeasureParticle;
-import static com.ni.vision.NIVision.imaqNand;
-import static com.ni.vision.NIVision.imaqOr;
-import static com.ni.vision.NIVision.imaqParticleFilter4;
-import static com.ni.vision.NIVision.imaqReadFile;
-import static com.ni.vision.NIVision.imaqRejectBorder;
-import static com.ni.vision.NIVision.imaqThreshold;
-import static com.ni.vision.NIVision.imaqWriteFile;
+import static com.ni.vision.NIVision.*;
 
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
+import com.ni.vision.NIVision.AxisOrientation;
+import com.ni.vision.NIVision.CalibrationUnit;
 import com.ni.vision.NIVision.ColorMode;
+import com.ni.vision.NIVision.CoordinateSystem;
+import com.ni.vision.NIVision.DrawMode;
 import com.ni.vision.NIVision.GetImageSizeResult;
+import com.ni.vision.NIVision.GridDescriptor;
 import com.ni.vision.NIVision.Image;
 import com.ni.vision.NIVision.ImageType;
-import com.ni.vision.NIVision.MatchShapeResult;
 import com.ni.vision.NIVision.MeasurementType;
 import com.ni.vision.NIVision.ParticleFilterCriteria2;
 import com.ni.vision.NIVision.ParticleFilterOptions2;
-import com.ni.vision.NIVision.ShapeReport;
+import com.ni.vision.NIVision.Point;
+import com.ni.vision.NIVision.PointFloat;
+import com.ni.vision.NIVision.ScalingMethod;
 
-import aABB.FindingAlgorithum.Sample.OverflowHandel;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SampleRobot;
@@ -55,27 +49,32 @@ public class Robot extends SampleRobot {
 
 	public void operatorControl() {
 		int lastImage = 0;
+		int index = 0;
+		camera.setSize(320, 240); 
+		
 		while (isOperatorControl() && isEnabled()) {
 			Image maskImage = imaqCreateImage(ImageType.IMAGE_U8, 7);			
 			Image image = imaqCreateImage(ImageType.IMAGE_U8, 7);
 			camera.getImage(image);
 			imaqDuplicate(maskImage, image);
+
+			SmartDashboard.putNumber("Index: ", index ++);
 			
-			if(joyOp.getRawButton(2)){
-				int index = 0;
-				try {
-					while(true) {
-						Image indexTest = imaqCreateImage(ImageType.IMAGE_U8, 7);
-						imaqReadFile(indexTest, "/image" + index + ".jpg");
-						indexTest.free();
-						
-						index ++;
-					}
-				} catch(Exception e) {}
-					
-				imaqWriteFile(image, "/image" + index + ".jpg", RGB_WHITE);
-				return;
-			}
+//			if(joyOp.getRawButton(2)){
+//				int index = 0;
+//				try {
+//					while(true) {
+//						Image indexTest = imaqCreateImage(ImageType.IMAGE_U8, 7);
+//						imaqReadFile(indexTest, "/image" + index + ".jpg");
+//						indexTest.free();
+//						
+//						index ++;
+//					}
+//				} catch(Exception e) {}
+//					
+//				imaqWriteFile(image, "/image" + index + ".jpg", RGB_WHITE);
+//				return;
+//			}
 			
 			GetImageSizeResult size = imaqGetImageSize(image);
 			SmartDashboard.putString("Size: ", size.width + ", " + size.height);
@@ -90,38 +89,59 @@ public class Robot extends SampleRobot {
 			removeElogatedParticles(filterImage, filterImage, 3);
 			
 			imaqMask(maskImage, maskImage, filterImage);
-
+			
+			GridDescriptor gridDescriptor = new GridDescriptor(1, 1, CalibrationUnit.UNDEFINED);
+			CoordinateSystem coordinateSystem = new CoordinateSystem(new PointFloat(0, 0), 0, AxisOrientation.INDIRECT);
+			imaqSetSimpleCalibration(filterImage, ScalingMethod.SCALE_TO_FIT, 1, gridDescriptor, coordinateSystem);
+			
+//			GetCalibrationInfoReport info = imaqCalibrationGetCalibrationInfo(filterImage, 0);
+//			SmartDashboard.putString("info: ", info.calibrationRoi.toString());
+//			info.free();
+			
 			int particleCount = imaqCountParticles(filterImage, 1);
+			SmartDashboard.putNumber("Number of Particles: ", particleCount);
 			AABB[] particles = new AABB[particleCount];
 			for(int i = 0; i < particleCount; i ++) {
 				particles[i] = AABB.loadAABB(filterImage, true, i);
 			}
 			
-			imaqWriteFile(filterImage, "/passThroughImage.jpg", RGB_WHITE);
-			java.awt.Image javaImage = Toolkit.getDefaultToolkit().getImage("/passThroughImage.jpg");
+			long startTime = System.currentTimeMillis();
+			imaqWriteBMPFile(filterImage, "/passThrough.bmp", 0, RGB_WHITE);
+			ByteBuffer readImage = File_IO.read("/passThrough.bmp"); readImage.reset();
+			SimpleBMPImage simpleImage = new SimpleBMPImage(readImage);
+			SmartDashboard.putNumber("Time: ", System.currentTimeMillis() - startTime);
+			
+//			BufferedImage javaImage = new BufferedImage(320, 240, BufferedImage.TYPE_INT_RGB);
 //			javaImage.
 			
+//			for(AABB aabb : particles) {
+//				Sample[] corner = findBoundingBoxCorner(aabb, javaImage, 16);
+//				for(int i = 0; i < corner.length; i ++) {
+//					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
+//							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
+//							new Point(corner[(i + 1) % corner.length].getCenterX(), 
+//									corner[(i + 1) % corner.length].getCenterY()), 255);
+//				}
+//			}
 			
 			
-			
-			
-			Image shapeImage = imaqCreateImage(ImageType.IMAGE_U8, 7);
-			imaqDuplicate(shapeImage, filterImage);
+//			Image shapeImage = imaqCreateImage(ImageType.IMAGE_U8, 7);
+//			imaqDuplicate(shapeImage, filterImage);
+//
+//			Image imageTemplate = imaqCreateImage(ImageType.IMAGE_U8, 7);
+//			imaqReadFile(imageTemplate, TEMPLATE_PATH);
+//			imaqThreshold(imageTemplate, imageTemplate, 1, 255, 1, 1);
+//			
+//			MatchShapeResult shapeReport = imaqMatchShape(shapeImage, shapeImage, imageTemplate, 1, 1, 0.5);
+//
+//			int numOfMatches = 0;
+//			for(ShapeReport report : shapeReport.array) {
+//				if(report.score >= MINIMUM_SCORE) {
+//					numOfMatches ++;
+//				}
+//			}
 
-			Image imageTemplate = imaqCreateImage(ImageType.IMAGE_U8, 7);
-			imaqReadFile(imageTemplate, TEMPLATE_PATH);
-			imaqThreshold(imageTemplate, imageTemplate, 1, 255, 1, 1);
-			
-			MatchShapeResult shapeReport = imaqMatchShape(shapeImage, shapeImage, imageTemplate, 1, 1, 0.5);
-
-			int numOfMatches = 0;
-			for(ShapeReport report : shapeReport.array) {
-				if(report.score >= MINIMUM_SCORE) {
-					numOfMatches ++;
-				}
-			}
-
-			SmartDashboard.putNumber("Number of Matches: ", numOfMatches);
+//			SmartDashboard.putNumber("Number of Matches: ", numOfMatches);
 
 			boolean newImageUse = false;
 			for(int i = 1; i < 12; i ++) {
@@ -160,8 +180,8 @@ public class Robot extends SampleRobot {
 			
 			compositThreshold.free();
 			filterImage.free();
-			imageTemplate.free();
-			shapeImage.free();
+//			imageTemplate.free();
+//			shapeImage.free();
 		}
 	}
 	
@@ -214,7 +234,7 @@ public class Robot extends SampleRobot {
 	}
 	
 	
-	public Sample[] findBoundingBoxCorner(AABB aabb, BufferedImage image, int sampleSize) {
+	public Sample[] findBoundingBoxCorner(AABB aabb, SimpleBMPImage image, int sampleSize) {
 		Sample[] samples = new Sample[4];
 		for(int i = 0; i < samples.length; i ++) {
 			samples[i] = new Sample(sampleSize, aabb.getCenterX(), aabb.getCenterY());
@@ -229,8 +249,154 @@ public class Robot extends SampleRobot {
 		return samples;
 	}
 	
+	public static class SimpleBMPImage {
+		private int width, height;
+		private int[] imageData;
+		
+		public SimpleBMPImage(ByteBuffer buffer) {
+			BMP_Header.read(buffer);
+			BMP_Info_Header info_Header = BMP_Info_Header.read(buffer);
+		    int padding = (4 - (info_Header.width * 3) % 4) % 4;
+			
+			this.width = Math.abs(info_Header.width);
+			this.height = Math.abs(info_Header.height);
+			this.imageData = new int[width * height];
+			
+			
+			for(int y = 0; y < height; y ++) {
+				for(int x = 0; x < width; x ++) {
+					RGB_Triple rgb = RGB_Triple.read(buffer);
+					imageData[x + y * width] = rgb.getRGB();
+				}
+				
+				buffer.get(new byte[padding], 0, padding);
+			}
+		}
+		
+		private static class RGB_Triple {
+			private byte red;
+			private byte green;
+			private byte blue;
+			
+			private RGB_Triple() {}
+			
+			public static RGB_Triple read(ByteBuffer buffer) {
+				RGB_Triple rgb = new RGB_Triple();
+				
+				rgb.red = buffer.get();
+				rgb.green = buffer.get();
+				rgb.blue = buffer.get();
+				
+				return rgb;
+			}
+			
+			public int getRGB() {
+				return red << 16 | green << 8 | blue;
+			}
+		}
+		
+		private static class BMP_Header {
+			private short type;
+			private int size;
+			private short reserved1;
+			private short reserved2;
+			private int offBit;
+			
+			private BMP_Header() {}
+			
+			public static BMP_Header read(ByteBuffer buffer) {
+				BMP_Header header = new BMP_Header();
+				
+				header.type = readShort(buffer);
+				header.size = readInt(buffer);
+				header.reserved1 = readShort(buffer);
+				header.reserved2 = readShort(buffer);
+				header.offBit = readInt(buffer);
+				
+				return header;
+			}
+			
+			private static short readShort(ByteBuffer buffer) {
+				byte[] bytes = new byte[2];
+				buffer.get(bytes, 0, bytes.length);
+				short value = 0;
+				for(int i = 0; i < bytes.length; i ++)
+					value |= bytes[i] << 8*i;
+				return value;
+			}
+			
+			private static int readInt(ByteBuffer buffer) {
+				byte[] bytes = new byte[4];
+				buffer.get(bytes, 0, bytes.length);
+				int value = 0;
+				for(int i = 0; i < bytes.length; i ++)
+					value |= bytes[i] << 8*i;
+				return value;
+			}
+		}
+		
+		private static class BMP_Info_Header {
+			private int size; 
+		    private int width; 
+		    private int height; 
+		    private short planes; 
+		    private short bitCount; 
+		    private int compression; 
+		    private int sizeImage; 
+		    private int xPelsPerMeter; 
+		    private int yPelsPerMeter; 
+		    private int clrUsed; 
+		    private int clrImportant; 
+			
+			private BMP_Info_Header() {}
+			
+			public static BMP_Info_Header read(ByteBuffer buffer) {
+				BMP_Info_Header header = new BMP_Info_Header();
+				
+				header.size = readInt(buffer);
+				header.width = readInt(buffer);
+				header.height = readInt(buffer);
+				header.planes = readShort(buffer);
+				header.bitCount = readShort(buffer);
+				header.compression = readInt(buffer);
+				header.sizeImage = readInt(buffer);
+				header.xPelsPerMeter = readInt(buffer); 
+				header.yPelsPerMeter = readInt(buffer); 
+				header.clrUsed = readInt(buffer);
+				header.clrImportant  = readInt(buffer);
+				
+				return header;
+			}
+			
+			private static short readShort(ByteBuffer buffer) {
+				byte[] bytes = new byte[2];
+				buffer.get(bytes, 0, bytes.length);
+				short value = 0;
+				for(int i = 0; i < bytes.length; i ++)
+					value |= bytes[i] << 8*i;
+				return value;
+			}
+			
+			private static int readInt(ByteBuffer buffer) {
+				byte[] bytes = new byte[4];
+				buffer.get(bytes, 0, bytes.length);
+				int value = 0;
+				for(int i = 0; i < bytes.length; i ++)
+					value |= bytes[i] << 8*i;
+				return value;
+			}
+		}
+
+		public int getWidth() { return width; }
+		public int getHeight() { return height; }
+		
+		public int getRGB(int x, int y) {
+			return imageData[x + y * width];
+		}
+	}
+	
 	public static class Sample {
-		private BufferedImage image;
+		private SimpleBMPImage image;
 		private int sampleSize;
 		private boolean[][] sampleData;
 		private int x, y;
@@ -345,7 +511,7 @@ public class Robot extends SampleRobot {
 		 * Sets the image that the sample will sample from
 		 * @param image The image to use
 		 */
-		public void bindImage(BufferedImage image) {
+		public void bindImage(SimpleBMPImage image) {
 			this.image = image;
 		}
 		
@@ -502,7 +668,7 @@ public class Robot extends SampleRobot {
 //		x --;  // Slowly move the sample section to the Left by 1 pixel at a time
 //		
 //		for(int xScan = 0; xScan < sampleSize; xScan ++) {
-//		for(int yScan = -sampleSize/2; yScan < sampleSize/2; yScan ++) {
+//		for(int yScan = -sampleSize/2; yScan < sample/2; yScan ++) {
 //			
 //			// Skip any parts outside of the Image
 //			if(yScan + y >= image.getHeight() || yScan + y < 0 || xScan + x < image.getWidth()) {
