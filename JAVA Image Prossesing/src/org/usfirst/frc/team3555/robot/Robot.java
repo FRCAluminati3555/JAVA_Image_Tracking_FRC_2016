@@ -111,18 +111,15 @@ public class Robot extends SampleRobot {
 			SimpleBMPImage simpleImage = new SimpleBMPImage(readImage);
 			SmartDashboard.putNumber("Time: ", System.currentTimeMillis() - startTime);
 			
-//			BufferedImage javaImage = new BufferedImage(320, 240, BufferedImage.TYPE_INT_RGB);
-//			javaImage.
-			
-//			for(AABB aabb : particles) {
-//				Sample[] corner = findBoundingBoxCorner(aabb, javaImage, 16);
-//				for(int i = 0; i < corner.length; i ++) {
-//					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
-//							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
-//							new Point(corner[(i + 1) % corner.length].getCenterX(), 
-//									corner[(i + 1) % corner.length].getCenterY()), 255);
-//				}
-//			}
+			for(AABB aabb : particles) {
+				Sample[] corner = findBoundingBoxCorner(aabb, simpleImage, 16);
+				for(int i = 0; i < corner.length; i ++) {
+					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
+							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
+							new Point(corner[(i + 1) % corner.length].getCenterX(), 
+									corner[(i + 1) % corner.length].getCenterY()), 255);
+				}
+			}
 			
 			
 //			Image shapeImage = imaqCreateImage(ImageType.IMAGE_U8, 7);
