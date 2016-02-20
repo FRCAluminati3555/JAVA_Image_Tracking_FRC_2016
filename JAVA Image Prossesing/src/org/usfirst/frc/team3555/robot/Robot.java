@@ -106,40 +106,22 @@ public class Robot extends SampleRobot {
 			}
 			
 			long startTime = System.currentTimeMillis();
-			imaqWriteBMPFile(filterImage, "/passThrough.bmp", 0, RGB_WHITE);
+			imaqWriteFile(maskImage, "/passThrough.bmp", RGB_WHITE);
+//			imaqWriteBMPFile(filterImage, "/passThrough.bmp", 0, RGB_WHITE);
 			ByteBuffer readImage = File_IO.read("/passThrough.bmp"); readImage.reset();
 			SimpleBMPImage simpleImage = new SimpleBMPImage(readImage);
 			SmartDashboard.putNumber("Time: ", System.currentTimeMillis() - startTime);
 			
 			for(AABB aabb : particles) {
-				Sample[] corner = findBoundingBoxCorner(aabb, simpleImage, 16);
-				for(int i = 0; i < corner.length; i ++) {
-					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
-							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
-							new Point(corner[(i + 1) % corner.length].getCenterX(), 
-									corner[(i + 1) % corner.length].getCenterY()), 255);
-				}
+//				Sample[] corner = findBoundingBoxCorner(aabb, simpleImage, 16);
+//				for(int i = 0; i < corner.length; i ++) {
+//					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
+//							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
+//							new Point(corner[(i + 1) % corner.length].getCenterX(), 
+//									corner[(i + 1) % corner.length].getCenterY()), 255);
+//				}
 			}
 			
-			
-//			Image shapeImage = imaqCreateImage(ImageType.IMAGE_U8, 7);
-//			imaqDuplicate(shapeImage, filterImage);
-//
-//			Image imageTemplate = imaqCreateImage(ImageType.IMAGE_U8, 7);
-//			imaqReadFile(imageTemplate, TEMPLATE_PATH);
-//			imaqThreshold(imageTemplate, imageTemplate, 1, 255, 1, 1);
-//			
-//			MatchShapeResult shapeReport = imaqMatchShape(shapeImage, shapeImage, imageTemplate, 1, 1, 0.5);
-//
-//			int numOfMatches = 0;
-//			for(ShapeReport report : shapeReport.array) {
-//				if(report.score >= MINIMUM_SCORE) {
-//					numOfMatches ++;
-//				}
-//			}
-
-//			SmartDashboard.putNumber("Number of Matches: ", numOfMatches);
-
 			boolean newImageUse = false;
 			for(int i = 1; i < 12; i ++) {
 				if(i == 4) continue;
@@ -291,7 +273,8 @@ public class Robot extends SampleRobot {
 				return red << 16 | green << 8 | blue;
 			}
 		}
-		
+
+		@SuppressWarnings("unused")
 		private static class BMP_Header {
 			private short type;
 			private int size;
@@ -331,7 +314,8 @@ public class Robot extends SampleRobot {
 				return value;
 			}
 		}
-		
+
+		@SuppressWarnings("unused")
 		private static class BMP_Info_Header {
 			private int size; 
 		    private int width; 
