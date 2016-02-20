@@ -60,22 +60,6 @@ public class Robot extends SampleRobot {
 
 			SmartDashboard.putNumber("Index: ", index ++);
 			
-//			if(joyOp.getRawButton(2)){
-//				int index = 0;
-//				try {
-//					while(true) {
-//						Image indexTest = imaqCreateImage(ImageType.IMAGE_U8, 7);
-//						imaqReadFile(indexTest, "/image" + index + ".jpg");
-//						indexTest.free();
-//						
-//						index ++;
-//					}
-//				} catch(Exception e) {}
-//					
-//				imaqWriteFile(image, "/image" + index + ".jpg", RGB_WHITE);
-//				return;
-//			}
-			
 			GetImageSizeResult size = imaqGetImageSize(image);
 			SmartDashboard.putString("Size: ", size.width + ", " + size.height);
 			
@@ -106,20 +90,20 @@ public class Robot extends SampleRobot {
 			}
 			
 			long startTime = System.currentTimeMillis();
-			imaqWriteFile(maskImage, "/passThrough.bmp", RGB_WHITE);
-//			imaqWriteBMPFile(filterImage, "/passThrough.bmp", 0, RGB_WHITE);
+//			imaqWriteFile(maskImage, "/passThrough.bmp", RGB_WHITE);
+			imaqWriteBMPFile(filterImage, "/passThrough1.bmp", 0, RGB_BLACK);
 			ByteBuffer readImage = File_IO.read("/passThrough.bmp"); readImage.reset();
-			SimpleBMPImage simpleImage = new SimpleBMPImage(readImage);
+			SimpleBinaryImage simpleImage = SimpleBinaryImage.loadBMPImage(readImage);
 			SmartDashboard.putNumber("Time: ", System.currentTimeMillis() - startTime);
 			
 			for(AABB aabb : particles) {
-//				Sample[] corner = findBoundingBoxCorner(aabb, simpleImage, 16);
-//				for(int i = 0; i < corner.length; i ++) {
-//					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
-//							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
-//							new Point(corner[(i + 1) % corner.length].getCenterX(), 
-//									corner[(i + 1) % corner.length].getCenterY()), 255);
-//				}
+				Sample[] corner = findBoundingBoxCorner(aabb, simpleImage, 16);
+				for(int i = 0; i < corner.length; i ++) {
+					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
+							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
+							new Point(corner[(i + 1) % corner.length].getCenterX(), 
+									corner[(i + 1) % corner.length].getCenterY()), 255);
+				}
 			}
 			
 			boolean newImageUse = false;
@@ -159,8 +143,6 @@ public class Robot extends SampleRobot {
 			
 			compositThreshold.free();
 			filterImage.free();
-//			imageTemplate.free();
-//			shapeImage.free();
 		}
 	}
 	
@@ -213,7 +195,7 @@ public class Robot extends SampleRobot {
 	}
 	
 	
-	public Sample[] findBoundingBoxCorner(AABB aabb, SimpleBMPImage image, int sampleSize) {
+	public Sample[] findBoundingBoxCorner(AABB aabb, SimpleBinaryImage image, int sampleSize) {
 		Sample[] samples = new Sample[4];
 		for(int i = 0; i < samples.length; i ++) {
 			samples[i] = new Sample(sampleSize, aabb.getCenterX(), aabb.getCenterY());
@@ -226,6 +208,44 @@ public class Robot extends SampleRobot {
 		samples[1].findCorner(Direction.Left, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
 	
 		return samples;
+	}
+	
+	public static class SimpleBinaryImage {
+		private int width, height;
+		private boolean[] imageData;
+		
+		private SimpleBinaryImage(int width, int height) {
+			this.width = width;
+			this.height = height;
+			
+			imageData = new boolean[width * height];
+		}
+		
+		public static SimpleBinaryImage loadBMPImage(ByteBuffer buffer) {
+			SimpleBMPImage.BMP_Header.read(buffer);
+			SimpleBMPImage.BMP_Info_Header info_Header = SimpleBMPImage.BMP_Info_Header.read(buffer);
+		    int padding = (4 - (info_Header.width * 3) % 4) % 4;
+			
+		    SimpleBinaryImage binaryImage = new SimpleBinaryImage(info_Header.width, Math.abs(info_Header.height));
+			
+			for(int y = 0; y < binaryImage.height; y ++) {
+				for(int x = 0; x < binaryImage.width; x ++) {
+					SimpleBMPImage.RGB_Triple rgb = SimpleBMPImage.RGB_Triple.read(buffer);
+					binaryImage.imageData[x + y * binaryImage.width] = 
+							rgb.getRed() + rgb.getGreen() + rgb.getBlue() > 0;
+				}
+				
+				buffer.get(new byte[padding], 0, padding);
+			}
+			
+			return binaryImage;
+		}
+
+		public int getWidth() { return width; }
+		public int getHeight() { return height; }
+
+		public boolean[] getImageData() { return imageData; }
+		public boolean get(int x, int y) { return imageData[x + y * width]; }
 	}
 	
 	public static class SimpleBMPImage {
@@ -241,7 +261,6 @@ public class Robot extends SampleRobot {
 			this.height = Math.abs(info_Header.height);
 			this.imageData = new int[width * height];
 			
-			
 			for(int y = 0; y < height; y ++) {
 				for(int x = 0; x < width; x ++) {
 					RGB_Triple rgb = RGB_Triple.read(buffer);
@@ -252,7 +271,7 @@ public class Robot extends SampleRobot {
 			}
 		}
 		
-		private static class RGB_Triple {
+		public static class RGB_Triple {
 			private byte red;
 			private byte green;
 			private byte blue;
@@ -269,13 +288,17 @@ public class Robot extends SampleRobot {
 				return rgb;
 			}
 			
+			public byte getRed() { return red; }
+			public byte getGreen() { return green; }
+			public byte getBlue() { return blue; }
+
 			public int getRGB() {
 				return red << 16 | green << 8 | blue;
 			}
 		}
 
 		@SuppressWarnings("unused")
-		private static class BMP_Header {
+		public static class BMP_Header {
 			private short type;
 			private int size;
 			private short reserved1;
@@ -316,7 +339,7 @@ public class Robot extends SampleRobot {
 		}
 
 		@SuppressWarnings("unused")
-		private static class BMP_Info_Header {
+		public static class BMP_Info_Header {
 			private int size; 
 		    private int width; 
 		    private int height; 
@@ -377,7 +400,7 @@ public class Robot extends SampleRobot {
 	}
 	
 	public static class Sample {
-		private SimpleBMPImage image;
+		private SimpleBinaryImage image;
 		private int sampleSize;
 		private boolean[][] sampleData;
 		private int x, y;
@@ -450,7 +473,7 @@ public class Robot extends SampleRobot {
 				if(this.x + x >= image.getWidth() || this.y + y >= image.getHeight() || this.x + x < 0 || this.y + y < 0) 
 					sampleData[x][y] = handel.handelOverflow(this);
 				else
-					sampleData[x][y] = (image.getRGB(x + this.x, y + this.y) & 0xFF00) > 0;
+					sampleData[x][y] = image.get(x + this.x, y + this.y);
 					
 				total += sampleData[x][y] ? 1 : 0;	
 			}}
@@ -492,7 +515,7 @@ public class Robot extends SampleRobot {
 		 * Sets the image that the sample will sample from
 		 * @param image The image to use
 		 */
-		public void bindImage(SimpleBMPImage image) {
+		public void bindImage(SimpleBinaryImage image) {
 			this.image = image;
 		}
 		
@@ -594,6 +617,22 @@ public class Robot extends SampleRobot {
 		public int getCenterY() { return centerY; }
 	}
 }
+
+//if(joyOp.getRawButton(2)){
+//int index = 0;
+//try {
+//	while(true) {
+//		Image indexTest = imaqCreateImage(ImageType.IMAGE_U8, 7);
+//		imaqReadFile(indexTest, "/image" + index + ".jpg");
+//		indexTest.free();
+//		
+//		index ++;
+//	}
+//} catch(Exception e) {}
+//	
+//imaqWriteFile(image, "/image" + index + ".jpg", RGB_WHITE);
+//return;
+//}
 
 //public void findCorner(AABB aabb, BufferedImage image, int sampleSize, float halfMark, float deviation) {
 //	// This method finds the location of a corner a shape by quickly and inaccurately shifting to the edge of
