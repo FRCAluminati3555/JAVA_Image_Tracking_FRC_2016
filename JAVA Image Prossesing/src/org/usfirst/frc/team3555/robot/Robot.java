@@ -2,13 +2,6 @@ package org.usfirst.frc.team3555.robot;
 
 import static com.ni.vision.NIVision.*;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBufferByte;
-import java.awt.image.Raster;
-import java.awt.image.WritableRaster;
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.ni.vision.NIVision.AxisOrientation;
@@ -34,11 +27,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.vision.USBCamera;
 
 public class Robot extends SampleRobot {
-	private final int MINIMUM_SCORE = 750;
-	private final String TEMPLATE_PATH = "/Rectangle Shape Template.png";
-
 	private USBCamera camera;
-
 	private Joystick joyOp;
 	
 	public Robot() {
@@ -78,10 +67,6 @@ public class Robot extends SampleRobot {
 			CoordinateSystem coordinateSystem = new CoordinateSystem(new PointFloat(0, 0), 0, AxisOrientation.INDIRECT);
 			imaqSetSimpleCalibration(filterImage, ScalingMethod.SCALE_TO_FIT, 1, gridDescriptor, coordinateSystem);
 			
-//			GetCalibrationInfoReport info = imaqCalibrationGetCalibrationInfo(filterImage, 0);
-//			SmartDashboard.putString("info: ", info.calibrationRoi.toString());
-//			info.free();
-			
 			int particleCount = imaqCountParticles(filterImage, 1);
 			SmartDashboard.putNumber("Number of Particles: ", particleCount);
 			AABB[] particles = new AABB[particleCount];
@@ -90,7 +75,6 @@ public class Robot extends SampleRobot {
 			}
 			
 			long startTime = System.currentTimeMillis();
-//			imaqWriteFile(maskImage, "/passThrough.bmp", RGB_WHITE);
 			imaqWriteBMPFile(filterImage, "/passThrough1.bmp", 0, RGB_BLACK);
 			ByteBuffer readImage = File_IO.read("/passThrough.bmp"); readImage.reset();
 			SimpleBinaryImage simpleImage = SimpleBinaryImage.loadBMPImage(readImage);
