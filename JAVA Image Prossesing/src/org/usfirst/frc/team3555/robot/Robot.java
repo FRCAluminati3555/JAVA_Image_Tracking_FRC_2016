@@ -1,6 +1,13 @@
 package org.usfirst.frc.team3555.robot;
 
-import static com.ni.vision.NIVision.*;
+import static com.ni.vision.NIVision.RGB_BLACK;
+import static com.ni.vision.NIVision.imaqCountParticles;
+import static com.ni.vision.NIVision.imaqCreateImage;
+import static com.ni.vision.NIVision.imaqDrawLineOnImage;
+import static com.ni.vision.NIVision.imaqDuplicate;
+import static com.ni.vision.NIVision.imaqMask;
+import static com.ni.vision.NIVision.imaqSetSimpleCalibration;
+import static com.ni.vision.NIVision.imaqWriteBMPFile;
 
 import java.nio.ByteBuffer;
 
@@ -10,16 +17,11 @@ import org.usfirst.frc.team3555.robot.SimpleImage.SimpleBinaryImage;
 
 import com.ni.vision.NIVision.AxisOrientation;
 import com.ni.vision.NIVision.CalibrationUnit;
-import com.ni.vision.NIVision.ColorMode;
 import com.ni.vision.NIVision.CoordinateSystem;
 import com.ni.vision.NIVision.DrawMode;
-import com.ni.vision.NIVision.GetImageSizeResult;
 import com.ni.vision.NIVision.GridDescriptor;
 import com.ni.vision.NIVision.Image;
 import com.ni.vision.NIVision.ImageType;
-import com.ni.vision.NIVision.MeasurementType;
-import com.ni.vision.NIVision.ParticleFilterCriteria2;
-import com.ni.vision.NIVision.ParticleFilterOptions2;
 import com.ni.vision.NIVision.Point;
 import com.ni.vision.NIVision.PointFloat;
 import com.ni.vision.NIVision.ScalingMethod;
@@ -80,12 +82,12 @@ public class Robot extends SampleRobot {
 			for(AABB aabb : particles) { // Shape Match
 				Sample[] corner = ShapeMatcher.findBoundingBoxCorner(aabb, simpleImage, 16);
 				
-				for(int i = 0; i < corner.length; i ++) { // Draw line connecting from each "Corner"
-					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
-							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
-							new Point(corner[(i + 1) % corner.length].getCenterX(), 
-									corner[(i + 1) % corner.length].getCenterY()), 255);
-				}
+//				for(int i = 0; i < corner.length; i ++) { // Draw line connecting from each "Corner"
+//					imaqDrawLineOnImage(filterImage, filterImage, DrawMode.DRAW_VALUE, 
+//							new Point(corner[i].getCenterX(), corner[i].getCenterY()), 
+//							new Point(corner[(i + 1) % corner.length].getCenterX(), 
+//									corner[(i + 1) % corner.length].getCenterY()), 255);
+//				}
 			}
 			
 			// Select which Image to Draw

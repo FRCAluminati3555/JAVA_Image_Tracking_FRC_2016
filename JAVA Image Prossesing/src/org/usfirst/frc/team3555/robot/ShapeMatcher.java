@@ -7,7 +7,11 @@ import org.usfirst.frc.team3555.robot.SimpleImage.SimpleBinaryImage;
 import com.ni.vision.NIVision.Image;
 import com.ni.vision.NIVision.MeasurementType;
 
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 public class ShapeMatcher {
+	private static int findingIndex = 0;
 	public static Sample[] findBoundingBoxCorner(AABB aabb, SimpleBinaryImage image, int sampleSize) {
 		Sample[] samples = new Sample[4];
 		for(int i = 0; i < samples.length; i ++) {
@@ -15,10 +19,14 @@ public class ShapeMatcher {
 			samples[i].bindImage(image);
 		}
 		
-		samples[0].findCorner(Direction.Right, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
-		samples[1].findCorner(Direction.Right, Direction.Down, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
-		samples[0].findCorner(Direction.Left, Direction.Down, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
-		samples[1].findCorner(Direction.Left, Direction.Up, .5f, .25f, .02f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
+		findingIndex = 0;
+		samples[0].findCorner(Direction.Right, Direction.Up, .5f, .25f, .04f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
+		findingIndex = 1;
+		samples[1].findCorner(Direction.Right, Direction.Down, .5f, .25f, .04f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
+		findingIndex = 2;
+		samples[2].findCorner(Direction.Left, Direction.Down, .5f, .25f, .04f, .2f, (int) Math.ceil((double) sampleSize / 5.0));
+		findingIndex = 3;
+		samples[3].findCorner(Direction.Left, Direction.Up, .5f, .25f, .04f, .2f, (int) Math.ceil((double) sampleSize / 5.0)); 
 	
 		return samples;
 	}
@@ -113,6 +121,8 @@ public class ShapeMatcher {
 			while(calcPercentageOnEdge(direction, boarderSize) > boarderPercentage) {
 				step(direction);
 				percenatge = sample(OverflowHandel.Zero_On_Overflows);
+				SmartDashboard.putString("Finde Edge: ", "Steping: Percenatge = " + percenatge + ", X = " + x + ", Y = " + y);
+				Timer.delay(0.5);
 			}
 						
 			// Tweaking Step
@@ -124,11 +134,16 @@ public class ShapeMatcher {
 					nudge(direction.getOppsite());
 				percenatge = sample(OverflowHandel.Zero_On_Overflows);
 				differance = percenatge - targetPercantage;
+
+				SmartDashboard.putString("Finde Edge: ", "Tweaking: Percenatge = " + percenatge + ", Differance = " + differance + ", X = " + x + ", Y = " + y);
+				Timer.delay(0.1);
 			}
 		}
 		
 		public void findCorner(Direction primaryDirection, Direction secondaryDirection, float primaryPercenatge, float secondaryPercentage, float deviation, float boarderPercentage, int boarderSize) {
+			SmartDashboard.putString("Finding Corner: ", "On = Primary: Primary -> " + primaryDirection + ", Secondary -> " + secondaryDirection + ", Finding index = " + findingIndex);
 			findEdge(primaryDirection, primaryPercenatge, deviation, boarderPercentage, boarderSize);
+			SmartDashboard.putString("Finding Corner: ", "On = Secondary: Primary -> " + primaryDirection + ", Secondary -> " + secondaryDirection + ", Finding index = " + findingIndex);
 			findEdge(secondaryDirection, secondaryPercentage, deviation, boarderPercentage, boarderSize);
 		}
 		
@@ -239,5 +254,11 @@ public class ShapeMatcher {
 		public int getHeight() { return height; }
 		public int getCenterX() { return centerX; }
 		public int getCenterY() { return centerY; }
+
+		public String toString() {
+			return "AABB [x=" + x + ", y=" + y + ", width=" + width
+					+ ", height=" + height + ", centerX=" + centerX
+					+ ", centerY=" + centerY + "]";
+		}
 	}
 }

@@ -24,6 +24,17 @@ public class File_IO {
 		return false;
 	}
 	
+	public static boolean write(String path, ByteBuffer buffer) {		
+		try {
+			FileOutputStream out = new FileOutputStream(new File(path));
+			FileChannel outChannel = out.getChannel();
+			outChannel.write(buffer); out.close();
+			return true;
+		} catch(IOException e) {}
+		
+		return false;
+	}
+	
 	public static ByteBuffer read(String path) {
 		try {
 			FileInputStream in = new FileInputStream(new File(path));
@@ -37,5 +48,29 @@ public class File_IO {
 		return null;
 	}
 	
+	public static int bytesToInt(byte[] bytes, int offset, boolean mostSignificantLast) {
+		if(mostSignificantLast) {
+			return (bytes[3 + offset] & (0xFF << 24)) << 24 
+				 | (bytes[2 + offset] & (0xFF << 16)) << 16 
+				 | (bytes[1 + offset] & (0xFF <<  8)) << 8 
+				 | (bytes[0 + offset] & (0xFF <<  0)) << 0;
+		} else {
+			return (bytes[0 + offset] & (0xFF << 24)) << 24 
+				 | (bytes[1 + offset] & (0xFF << 16)) << 16 
+				 | (bytes[2 + offset] & (0xFF <<  8)) << 8 
+				 | (bytes[3 + offset] & (0xFF <<  0)) << 0;
+		}
+	}
 	
+	public static short bytesToShort(byte[] bytes, int offset, boolean mostSignificantLast) {
+		if(mostSignificantLast) {
+			return (short) (
+				  (bytes[1 + offset] & (0xFF << 8)) << 8 
+				| (bytes[0 + offset] & (0xFF << 0)) << 0);
+		} else {
+			return (short) (
+				   (bytes[0 + offset] & (0xFF << 8)) << 8 
+				 | (bytes[1 + offset] & (0xFF << 0)) << 0);
+		}
+	}
 }
