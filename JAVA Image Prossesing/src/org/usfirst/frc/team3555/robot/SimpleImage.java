@@ -20,7 +20,7 @@ public class SimpleImage {
 			
 			for(int y = 0; y < binaryImage.height; y ++) {
 			for(int x = 0; x < binaryImage.width; x ++) {
-				binaryImage.imageData[x + y * binaryImage.width] = bmpImage.imageData[x + y * bmpImage.width] != 0;
+				binaryImage.imageData[x + y * binaryImage.width] = bmpImage.imageData[x + y * bmpImage.width] != 255;
 			}}
 			
 			return binaryImage;
